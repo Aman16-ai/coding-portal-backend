@@ -1,8 +1,8 @@
-const Submission = require("../model/Submission");
-const SubmissionService = require("../service/SubmissionService")
+const Submission = require("../model/mongoModels/Submission");
+const SubmissionService = require("../service/SubmissionService");
 const createSubmission = async (req, res, next) => {
   try {
-    const submissionService = new SubmissionService()
+    const submissionService = new SubmissionService();
     const { username, preferredCodeLanguage, standardInput, sourceCode } =
       req.body;
     const payload = {
@@ -10,14 +10,13 @@ const createSubmission = async (req, res, next) => {
       source_code: sourceCode,
       stdin: standardInput,
     };
-    const result = await submissionService.getSubmissionResult(payload)
+    const result = await submissionService.getSubmissionResult(payload);
 
     const submission = await Submission.create({
-      username,
-      preferredCodeLanguage,
+      langugae: preferredCodeLanguage,
       standardInput,
       sourceCode,
-      stdout:result
+      stdout: result,
     });
     res.status(201).json(submission);
   } catch (error) {
@@ -28,14 +27,16 @@ const createSubmission = async (req, res, next) => {
 
 const getAllSubmission = async (req, res, next) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const pageSize = parseInt(req.query.pageSize) || 10;
+    const page = parseInt(req.query.page, 10) || 1;
+    const pageSize = parseInt(req.query.pageSize, 10) || 10;
     const offset = (page - 1) * pageSize;
 
-    const { count, rows } = await Submission.findAndCountAll({
-      offset,
-      limit: pageSize,
-    });
+    const submissions = await Submission
+                              .find()
+                              .skip(offset)
+                              .limit(pageSize);
+
+    const count = await Submission.countDocuments();
 
     const totalPages = Math.ceil(count / pageSize);
 
@@ -44,7 +45,7 @@ const getAllSubmission = async (req, res, next) => {
       totalPages,
       currentPage: page,
       pageSize,
-      submissions: rows,
+      submissions,
     });
   } catch (error) {
     console.error(error);
